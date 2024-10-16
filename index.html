@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlantUML Editor</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #header {
+            background-color: #f1f1f1;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        #footer {
+            padding: 10px;
+        }
+
+        #container {
+            display: flex;
+            flex: 1;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        #editor {
+            flex-grow: 0;
+            flex-shrink: 0;
+            width: calc(50% - 160px);
+            min-width: 200px;
+        }
+
+        #resizer {
+            width: 5px;
+            background-color: #ccc;
+            cursor: col-resize;
+        }
+
+        #image-container {
+            flex-grow: 100;
+            flex-shrink: 100;
+            padding: 10px;
+            overflow: auto;
+        }
+
+        #cola, #colb {
+            flex-grow: 0;
+            flex-shrink: 1;
+        }
+
+        #image-container img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ace.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ext-language_tools.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.10.5/brython.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body onload="brython()">
+
+
+<div id="header">This is the header</div>
+
+<div id="container">
+    <div id="cola">
+    </div>
+    <div id="editor"></div>
+    <div id="resizer"></div>
+    <div id="image-container">
+        <img id="diagram-image" src="https://www.plantuml.com/plantuml/png/SoWkIImgAStDuNBCoKnELT2rKt3AJrAmKiX8pSd9vt98pKi1IG80" alt="PlantUML Diagram">
+    </div>
+    <div id="colb">
+    </div>
+</div>
+
+<style>
+    /* Style for the text area */
+    #encoded-input {
+        width: 100%;
+        padding: 2px;
+        font-size: 14px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Tooltip container */
+    .tooltip-container {
+        width: 100%;
+        position: relative;
+        display: inline-block;
+    }
+
+    /* Tooltip text (hidden by default) */
+    .tooltip-container .tooltip-text {
+        visibility: hidden;
+        background-color: #ffffcc; /* Light yellow background */
+        color: #000; /* Black text */
+        text-align: center;
+        border-radius: 4px; /* Slightly rounded corners */
+        padding: 6px;
+        position: absolute;
+        z-index: 20;
+        bottom: calc(100% + 7px); /* Positions the tooltip above the field */
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        transition: opacity 0.3s;
+        border: 1px solid #ccc; /* Thin and light border */
+        box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    }
+
+    /* Triangle below the tooltip */
+    .tooltip-container .tooltip-text::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -7px; /* Adjusts for the border width */
+        border-width: 7px;
+        border-style: solid;
+        border-color: transparent; /* Light yellow triangle */
+
+        /* Adds a border around the triangle */
+        border-top-color: #ccc; /* Grey border on top */
+        border-left-color: transparent;
+        border-right-color: transparent;
+    }
+
+    /* Show tooltip on hover */
+    .tooltip-container:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+    }
+
+    /* Style for the copy button */
+    .btn {
+        padding: 4px 8px;
+        background-color: #f6f8fa; /* Lighter grey */
+        color: #24292e; /* Dark text color */
+        border: 1px solid #d1d5da; /* Light grey border */
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        margin: 10px 0; /* Adds some spacing above and below */
+    }
+
+    .btn:hover {
+        background-color: #e1e4e8; /* Slightly darker on hover */
+    }
+</style>
+
+<div id="footer">
+    <!-- Button to copy the text with an icon -->
+    <button class="btn" id="copy-btn">
+        <i class="fas fa-copy"></i> Copy
+    </button>
+
+    <!-- Button to paste the text with an icon -->
+    <button class="btn" id="paste-btn">
+        <i class="fas fa-paste"></i> Paste
+    </button>
+
+    <!-- Button to save with an icon -->
+    <button class="btn" id="save-btn">
+        <i class="fas fa-save"></i> Save
+    </button>
+
+    <!-- Button to load with an icon -->
+    <button class="btn" id="load-btn">
+        <i class="fas fa-folder-open"></i> Load
+    </button>
+
+    <div class="tooltip-container">
+        <input id="encoded-input" type="text" value="SoWkIImgAStDuNBCoKnELT2rKt3AJ-9oICrB0Ga20000">
+        <span class="tooltip-text">You can copy/paste any (previously) encoded date or URL here</span>
+    </div>
+</div>
+
+<!--  taken from https://github.com/johan/js-deflate -->
+<script src="rawinflate.js"></script>
+<script src="rawdeflate.js"></script>
+<script>
+  function encode64(data) {
+    let r = "";
+    for (let i = 0; i < data.length; i += 3) {
+      if (i + 2 == data.length) {
+        r += append3bytes(data.charCodeAt(i), data.charCodeAt(i + 1), 0);
+      } else if (i + 1 == data.length) {
+        r += append3bytes(data.charCodeAt(i), 0, 0);
+      } else {
+        r += append3bytes(data.charCodeAt(i), data.charCodeAt(i + 1), data.charCodeAt(i + 2));
+      }
+    }
+    return r;
+  }
+
+  function append3bytes(b1, b2, b3) {
+    const c1 = b1 >> 2;
+    const c2 = ((b1 & 0x3) << 4) | (b2 >> 4);
+    const c3 = ((b2 & 0xF) << 2) | (b3 >> 6);
+    const c4 = b3 & 0x3F;
+
+    let r = "";
+    r += encode6bit(c1 & 0x3F);
+    r += encode6bit(c2 & 0x3F);
+    r += encode6bit(c3 & 0x3F);
+    r += encode6bit(c4 & 0x3F);
+
+    return r;
+  }
+
+  function encode6bit(b) {
+    if (b < 10) {
+      return String.fromCharCode(48 + b);
+    }
+    b -= 10;
+    if (b < 26) {
+      return String.fromCharCode(65 + b);
+    }
+    b -= 26;
+    if (b < 26) {
+      return String.fromCharCode(97 + b);
+    }
+    b -= 26;
+    if (b == 0) {
+      return '-';
+    }
+    if (b == 1) {
+      return '_';
+    }
+    return '?';
+  }
+
+  let deflater = window.SharedWorker && new SharedWorker('rawdeflate.js');
+
+  if (deflater) {
+    deflater.port.addEventListener('message', done_deflating, false);
+    deflater.port.start();
+  } else if (window.Worker) {
+    deflater = new Worker('rawdeflate.js');
+    deflater.onmessage = done_deflating;
+  }
+
+  function done_deflating(e) {
+    window.brython_function(encode64(e.data));
+  }
+
+  function compress(s) {
+    // UTF8 encoding
+    s = unescape(encodeURIComponent(s));
+
+    if (deflater) {
+      if (deflater.port && deflater.port.postMessage) {
+        deflater.port.postMessage(s);
+      } else {
+        deflater.postMessage(s);
+      }
+    } else {
+      setTimeout(function() {
+        done_deflating({ data: deflate(s) });
+      }, 100);
+    }
+  }
+</script>
+
+
+<script>
+function decode65(data) {
+  let inflated = RawDeflate.inflate(decode64(data));
+
+  //Convert the "inflated" string directly into a byte array (Uint8Array)
+  let byteArray = Uint8Array.from(inflated, c => c.charCodeAt(0) & 0xFF);
+
+  //Convert the byte array into a UTF-8 string
+  return new TextDecoder("utf-8").decode(byteArray);
+}
+
+
+function decode64(data) {
+  let r = "";
+  for (let i = 0; i < data.length; i += 4) {
+    const b1 = decode6bit(data.charAt(i));
+    const b2 = decode6bit(data.charAt(i + 1));
+    const b3 = decode6bit(data.charAt(i + 2));
+    const b4 = decode6bit(data.charAt(i + 3));
+
+    const c1 = (b1 << 2) | (b2 >> 4);
+    const c2 = ((b2 & 0xF) << 4) | (b3 >> 2);
+    const c3 = ((b3 & 0x3) << 6) | b4;
+
+    r += String.fromCharCode(c1);
+    if (b3 !== 64) { // Check the end of the data (if it's filled with zeros)
+      r += String.fromCharCode(c2);
+    }
+    if (b4 !== 64) {
+      r += String.fromCharCode(c3);
+    }
+  }
+  return r;
+}
+
+function decode6bit(c) {
+  if (c >= '0' && c <= '9') {
+    return c.charCodeAt(0) - 48;
+  }
+  if (c >= 'A' && c <= 'Z') {
+    return c.charCodeAt(0) - 65 + 10;
+  }
+  if (c >= 'a' && c <= 'z') {
+    return c.charCodeAt(0) - 97 + 36;
+  }
+  if (c == '-') {
+    return 62;
+  }
+  if (c == '_') {
+    return 63;
+  }
+  return 64; // Padding character, usually not present
+}
+
+</script>
+
+
+<script>
+    ace.define("ace/mode/plantuml", ["require", "exports", "ace/lib/oop", "ace/mode/text", "ace/mode/text_highlight_rules"], function(acequire, exports) {
+        var oop = acequire("ace/lib/oop");
+        var TextMode = acequire("ace/mode/text").Mode;
+        var TextHighlightRules = acequire("ace/mode/text_highlight_rules").TextHighlightRules;
+
+        function PlantUMLHighlightRules() {
+            this.$rules = {
+                "start": [
+                    { token: "comment", regex: "^\\s*'.*" },
+                    { token: "comment", regex: "/'", next: "comment" },
+                    { token: "keyword", regex: "@startuml|@enduml|actor|participant|usecase|->|-->|:|note|as|class|interface|abstract|enum" },
+                    { token: "string", regex: '".*?"' }
+                ],
+                "comment": [
+                    { token: "comment", regex: ".*?'/", next: "start" },
+                    { token: "comment", regex: ".+" }
+                ]
+            };
+        }
+        oop.inherits(PlantUMLHighlightRules, TextHighlightRules);
+
+        function PlantUMLMode() {
+            this.HighlightRules = PlantUMLHighlightRules;
+            this.blockComment = { start: "/'", end: "'/" };
+        }
+        oop.inherits(PlantUMLMode, TextMode);
+
+        exports.Mode = PlantUMLMode;
+    });
+</script>
+
+    
+<script type="text/python">
+    from browser import document, window, html
+
+    # Text for the PlantUML diagram example
+    plantUMLDiagramText = """@startuml
+    Alice -> Bob : hello
+    @enduml
+    """
+
+    # Using custom mode in the ACE editor
+    editor = window.ace.edit("editor")
+    editor.session.setMode("ace/mode/plantuml")
+    editor.setTheme("ace/theme/github")  # Using the GitHub theme
+
+    # Set the initial content
+    editor.setValue(plantUMLDiagramText, 1)   # The second argument places the cursor at the end of the content
+
+    # Optional settings
+    editor.setOptions({
+        "fontSize": "12pt",
+        "showLineNumbers": True,
+        "tabSize": 4
+    })
+
+    def editor_change(*args):
+        # Retrieve the value from the editor
+        v = editor.getValue()
+        window.compress(v)
+
+    def kisscool(msg):
+        document["diagram-image"].attrs['src'] = f"https://www.plantuml.com/plantuml/png/{msg}"
+
+    # Variable to store the timer ID
+    timeout_id = None
+
+    def brython_function(msg):
+        global timeout_id
+        document["encoded-input"].value = msg
+
+        # If a timer was active for calling kisscool, cancel it
+        if timeout_id:
+            window.clearTimeout(timeout_id)
+
+        # Set a new timer for 1.5 seconds before calling the kisscool function
+        timeout_id = window.setTimeout(lambda: kisscool(msg), 1500)
+
+    # Register the function in the window object to access it via JavaScript
+    window.brython_function = brython_function
+
+    # Bind the change event to the editor_change function
+    editor.session.on('change', editor_change)
+
+    # Resize logic
+    resizer = document["resizer"]
+    editorDiv = document["editor"]
+    imageContainer = document["image-container"]
+
+    def resize(event):
+        containerRect = document["container"].getBoundingClientRect()
+        colaRect = document["cola"].getBoundingClientRect()
+
+        newWidth = event.clientX - containerRect.left - colaRect.width
+
+        editorDiv.style.width = f'{newWidth}px'
+
+    def stopResize(event):
+        document.unbind('mousemove', resize)
+        document.unbind('mouseup', stopResize)
+
+    def startResize(event):
+        event.preventDefault()
+        document.bind('mousemove', resize)
+        document.bind('mouseup', stopResize)
+
+    resizer.bind('mousedown', startResize)
+
+    # Function to limit the execution time of a task
+    def decode_with_timeout(input_value, timeout_ms):
+        # Creating a JavaScript Promise to handle the execution timeout
+        promise = window.Promise.new(lambda resolve, reject: 
+            javascript.this.setTimeout(lambda: reject("Timeout exceeded"), timeout_ms)
+        )
+
+        def run_decode(resolve, reject):
+            try:
+                # Immediate execution of the decode
+                decoded = window.decode65(input_value)
+                resolve(decoded)
+            except Exception as e:
+                reject(f"Error during decoding : {e}")
+
+        # Create a promise for the execution of decode65
+        decode_promise = window.Promise.new(run_decode)
+
+        # Return the promise with a race between the timeout and the decoding
+        return window.Promise.race([decode_promise, promise])
+
+
+    # Function that will be called when the encoded value changes
+    def on_encoded_input_change(event):
+        input_value = document["encoded-input"].value
+        # Check if a slash is present and retrieve the text after the last slash
+        if '/' in input_value:
+            input_value = input_value.rpartition('/')[-1]  # Take the part after the last slash
+
+        # Execute the function with a timeout
+        decode_with_timeout(input_value, 2000).then(
+            lambda result: editor.setValue(result),
+            lambda error: console.log(f"Error or timeout : {error}")
+        )
+
+    # Bind the 'input' event to the 'on_encoded_input_change' function
+    document["encoded-input"].bind("input", on_encoded_input_change)
+
+    # Function to copy the diagram text to the clipboard
+    def copy_to_clipboard(event):
+        editor_value = window.ace.edit("editor").getValue()  # Get the text from the editor
+        window.navigator.clipboard.writeText(editor_value)  # Copy to the clipboard
+
+    # Bind the copy_to_clipboard function to the "Copy" button
+    document["copy-btn"].bind("click", copy_to_clipboard)
+
+
+    # Function to paste the clipboard text into the editor
+    def paste_from_clipboard(event):
+        # Use the clipboard API to read the text
+        window.navigator.clipboard.readText().then(paste_text)
+
+    # Function that pastes the retrieved text into the editor
+    def paste_text(text):
+        editor = window.ace.edit("editor")  # Retrieve the ACE editor
+        editor.setValue(text, 1)  # Overwrite all content with the clipboard text, and place the cursor at the end
+
+    # Bind the paste_from_clipboard function to the "Paste" button
+    document["paste-btn"].bind("click", paste_from_clipboard)
+
+    def save_file(event):
+        # Generate an encoded date in the format YYYY_MM_DD__HH_MM_SS with JavaScript
+        current_time = window.Date.new().toISOString().replace(":", "_").replace("-", "_").split(".")[0].replace("T", "__")
+        
+        # Propose the encoded date as the default file name
+        filename = window.prompt("This will be saved locally in your browser:", f"diagram_{current_time}")
+        
+        if filename:
+            # Retrieve the content from the editor
+            editor_value = window.ace.edit("editor").getValue()
+            print(editor_value)
+            # Save in LocalStorage with the key provided by the user
+            window.localStorage.setItem("pl_" + filename, editor_value)
+            
+            # Confirmation of the save
+            print(f"Content saved under the key : {filename}")
+
+    # Bind the save_file function to the "Save" button
+    document["save-btn"].bind("click", save_file)
+
+
+    def load_file(event):
+        # Retrieve all keys that start with "pl_"
+        keys = [window.localStorage.key(i) for i in range(window.localStorage.length) if window.localStorage.key(i).startswith("pl_")]
+        
+        if not keys:
+            window.alert("Nothing to reload.")
+            return
+        
+        # Create a dynamic div to display the key options
+        load_div = document.createElement('div')
+        load_div.id = "load-div"
+        
+        # CSS styles to center the div
+        load_div.style.position = "absolute"
+        load_div.style.top = "50%"
+        load_div.style.left = "50%"
+        load_div.style.transform = "translate(-50%, -50%)"
+        load_div.style.backgroundColor = "white"
+        load_div.style.border = "1px solid #ccc"
+        load_div.style.padding = "20px"
+        load_div.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.1)"
+        load_div.style.zIndex = "1000"  # Ensure the div is in the foreground
+
+        # Content of the div
+        load_div.innerHTML = "<strong>Load selection</strong><br><br>"
+        
+        # Add a button for each key in the div
+        for key in keys:
+            button = html.BUTTON(key[3:], Class="btn")
+            button.style.margin = "5px"
+            button.bind("click", lambda ev, k=key: load_key(k))  # Bind an event for each button
+            load_div <= button
+        
+        # Add a button to close the div without loading
+        close_button = html.BUTTON(html.I(Class="fas fa-times") + " Close", Class="btn")
+        close_button.style.marginTop = "20px"
+        close_button.bind("click", lambda ev: document["load-div"].remove())
+        load_div <= html.BR()
+        load_div <= close_button
+        
+        # Add the div to the document
+        document.body <= load_div
+
+    def load_key(chosen_key):
+        # Load the value associated with the chosen key
+        editor_value = window.localStorage.getItem(chosen_key)
+        
+        # Reload the value into the editor
+        window.ace.edit("editor").setValue(editor_value)
+        print(f"Content loaded from the key : {chosen_key}")
+        
+        # Remove the div after loading the data
+        document["load-div"].remove()
+
+    # Bind the load_file function to the "Load" button
+    document["load-btn"].bind("click", load_file)
+
+</script>
+
+</body>
+</html>
