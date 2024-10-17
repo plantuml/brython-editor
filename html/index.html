@@ -61,15 +61,53 @@
             height: auto;
         }
     </style>
+
+    <style>
+        table {
+            width: 100%;
+            margin: 1px auto;
+            border-collapse: collapse;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        th, td {
+            padding: 1px 5px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            cursor: pointer;
+        }
+        tbody tr:hover {
+            background-color: #f1f1f1;
+        }
+        table button {
+            padding: 1px;
+            background-color: #f6f8fa; /* Lighter grey */
+            color: #24292e; /* Dark text color */
+            border: 1px solid #d1d5da; /* Light grey border */
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 0;
+        }
+        table button:hover {
+            background-color: #e1e4e8; /* Slightly darker on hover */
+        }
+    </style>
+
+
+
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ace.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ext-language_tools.js"></script>
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.10.5/brython.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.12.2/brython.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.3/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-fork-ribbon-css/0.2.3/gh-fork-ribbon.min.css" />
 </head>
 <body onload="brython()">
 
+<a class="github-fork-ribbon" href="https://github.com/plantuml/brython-editor" data-ribbon="Fork me on GitHub" title="Fork me on GitHub">Fork me on GitHub</a>
 
-<div id="header">This is the header</div>
+<div id="header"><a href=https://plantuml.com>PlantUML</a> Web Editor</div>
 
 <div id="container">
     <div id="cola">
@@ -158,6 +196,23 @@
     .btn:hover {
         background-color: #e1e4e8; /* Slightly darker on hover */
     }
+
+    /* Style for the delete button */
+    .delete-btn {
+        padding: 2px 8px;
+        background-color: #f6f8fa; /* Lighter grey */
+        color: #24292e; /* Dark text color */
+        border: 1px solid #d1d5da; /* Light grey border */
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        margin: 2px 0; /* Adds some spacing above and below */
+    }
+
+    .delete-btn:hover {
+        background-color: #e1e4e8; /* Slightly darker on hover */
+    }
+
 </style>
 
 <div id="footer">
@@ -178,7 +233,7 @@
 
     <!-- Button to load with an icon -->
     <button class="btn" id="load-btn">
-        <i class="fas fa-folder-open"></i> Load
+        <i class="fas fa-folder-open"></i> List
     </button>
 
     <div class="tooltip-container">
@@ -529,7 +584,34 @@ function decode6bit(c) {
         if not keys:
             window.alert("Nothing to reload.")
             return
+
+        # Sort the keys alphabetically, including the "pl_" prefix
+        keys.sort()  # Sort directly, including the 'pl_' prefix
+
+        # Create a background div that covers the entire page
+        back_div = document.createElement('div')
+        back_div.id = "back-div"
         
+        # CSS styles for the back_div
+        back_div.style.position = "fixed"
+        back_div.style.top = "0"
+        back_div.style.left = "0"
+        back_div.style.width = "100%"
+        back_div.style.height = "100%"
+        back_div.style.backgroundColor = "rgba(0, 0, 0, 0.5)"  # Transparent dark background
+        back_div.style.zIndex = "999"  # Back div behind load_div
+
+        # Function to close both divs when clicking on back_div
+        def close_on_click(event):
+            back_div.remove()
+            load_div.remove()
+
+        # Bind click event to back_div to close it when clicked
+        back_div.bind("click", close_on_click)
+                
+        # Add the back_div to the document
+        document.body <= back_div
+    
         # Create a dynamic div to display the key options
         load_div = document.createElement('div')
         load_div.id = "load-div"
@@ -541,29 +623,61 @@ function decode6bit(c) {
         load_div.style.transform = "translate(-50%, -50%)"
         load_div.style.backgroundColor = "white"
         load_div.style.border = "1px solid #ccc"
-        load_div.style.padding = "20px"
+        load_div.style.padding = "20px"  # Increase padding for a larger look
         load_div.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.1)"
+        load_div.style.width = "70%"  # Increase width of the div
+        load_div.style.height = "60%"  # Increase height of the div
+        load_div.style.overflowY = "auto"  # Add scroll if content overflows vertically
         load_div.style.zIndex = "1000"  # Ensure the div is in the foreground
 
-        # Content of the div
-        load_div.innerHTML = "<strong>Load selection</strong><br><br>"
+
+        # Insert table instead of buttons
+        load_div.innerHTML = "<strong>Available Files</strong><br><br>"
         
-        # Add a button for each key in the div
-        for key in keys:
-            button = html.BUTTON(key[3:], Class="btn")
-            button.style.margin = "5px"
-            button.bind("click", lambda ev, k=key: load_key(k))  # Bind an event for each button
-            load_div <= button
-        
-        # Add a button to close the div without loading
-        close_button = html.BUTTON(html.I(Class="fas fa-times") + " Close", Class="btn")
-        close_button.style.marginTop = "20px"
-        close_button.bind("click", lambda ev: document["load-div"].remove())
-        load_div <= html.BR()
-        load_div <= close_button
+        table = html.TABLE()
+        table_body = html.TBODY()
+
+        # Add rows for each file
+        for i, key in enumerate(keys):
+            row = html.TR()
+
+            # Delete button column
+            delete_button = html.BUTTON(Class="delete-btn")
+            delete_button <= html.I(Class="fas fa-trash")  # Add Font Awesome trash icon inside the button
+            delete_button.bind("click", lambda ev, k=key: delete_file(k))
+            delete_col = html.TD(delete_button)
+            delete_col.style.width = "1%"  # Set a small width for the delete column
+            
+            # File name column
+            file_col = html.TD()
+            file_name_span = html.SPAN(key[3:])
+            file_col.bind("click", lambda ev, k=key: load_key(k))  # Bind click event to the span
+            file_col <= file_name_span  # Add span to the file_col
+
+            # Append columns to row
+            row <= delete_col
+            row <= file_col
+
+            # Append row to the table body
+            table_body <= row
+
+        # Append table body to the table
+        table <= table_body
+
+        # Add table to load_div
+        load_div <= table
         
         # Add the div to the document
         document.body <= load_div
+
+    def delete_file(chosen_key):
+        # Delete the file from LocalStorage
+        window.localStorage.removeItem(chosen_key)
+        
+        # Reload the div to reflect the changes
+        document["load-div"].remove()
+        load_file(None)
+
 
     def load_key(chosen_key):
         # Load the value associated with the chosen key
@@ -575,6 +689,7 @@ function decode6bit(c) {
         
         # Remove the div after loading the data
         document["load-div"].remove()
+        document["back-div"].remove()
 
     # Bind the load_file function to the "Load" button
     document["load-btn"].bind("click", load_file)
