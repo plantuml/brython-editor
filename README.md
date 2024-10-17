@@ -1,6 +1,6 @@
 # Brython Editor for PlantUML
 
-Welcome to the **Brython Editor**, a project aimed at integrating [Brython](https://brython.info/) with [PlantUML](https://plantuml.com/) to provide a seamless and powerful online diagramming tool.
+Welcome to the [Brython Editor](https://plantuml.github.io/brython-editor/), a project aimed at integrating [Brython](https://brython.info/) with [PlantUML](https://plantuml.com/) to provide a seamless and powerful online diagramming tool.
 
 ## What is Brython?
 
