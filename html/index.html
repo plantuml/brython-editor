@@ -108,7 +108,7 @@
 
 <a class="github-fork-ribbon" href="https://github.com/plantuml/brython-editor" data-ribbon="Fork me on GitHub" title="Fork me on GitHub">Fork me on GitHub</a>
 
-<div id="header"><a href=https://plantuml.com>PlantUML</a> Web Editor</div>
+<div id="header">Maybe the next <a href=https://plantuml.com>PlantUML</a> Web Editor...</div>
 
 <div id="container">
     <div id="cola">
@@ -116,7 +116,7 @@
     <div id="editor"></div>
     <div id="resizer"></div>
     <div id="image-container">
-        <img id="diagram-image" src="https://www.plantuml.com/plantuml/png/SoWkIImgAStDuNBCoKnELT2rKt3AJrAmKiX8pSd9vt98pKi1IG80" alt="PlantUML Diagram">
+        <img id="diagram-image" src="" alt="PlantUML Diagram">
     </div>
     <div id="colb">
     </div>
@@ -350,16 +350,24 @@
     # Retrieve the value of the 'uml' parameter
     uml_value = get_url_param('uml')
 
-    # Display or use the retrieved value
-    if uml_value:
-        print(f"'uml' parameter found: {uml_value}")
-
-
     # Text for the PlantUML diagram example
-    plantUMLDiagramText = """@startuml
+    text_diagram = """@startuml
     Alice -> Bob : hello
     @enduml
     """
+    text_diagram_encoded = "SoWkIImgAStDuNBCoKnELT2rKt3AJrAmKiX8pSd9vt98pKi1IG80"
+
+    plantuml_server = "https://www.plantuml.com"
+
+    def image_update(encoded):
+        document["diagram-image"].attrs['src'] = f"{plantuml_server}/plantuml/png/{encoded}"
+
+    # Display or use the retrieved value
+    if uml_value:
+        print(f"'uml' parameter found: {uml_value}")
+        text_diagram = decompress_and_decode(uml_value)
+
+    image_update(text_diagram_encoded)
 
     # Using custom mode in the ACE editor
     editor = window.ace.edit("editor")
@@ -367,7 +375,7 @@
     editor.setTheme("ace/theme/github")  # Using the GitHub theme
 
     # Set the initial content
-    editor.setValue(plantUMLDiagramText, 1)   # The second argument places the cursor at the end of the content
+    editor.setValue(text_diagram, 1)   # The second argument places the cursor at the end of the content
 
     # Optional settings
     editor.setOptions({
@@ -392,8 +400,6 @@
 
             timeout_id = window.setTimeout(lambda: image_update(encoded), 1500)
 
-    def image_update(encoded):
-        document["diagram-image"].attrs['src'] = f"https://www.plantuml.com/plantuml/png/{encoded}"
 
     # Bind the change event to the editor_change function
     editor.session.on('change', editor_change)
