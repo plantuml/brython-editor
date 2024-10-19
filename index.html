@@ -423,6 +423,20 @@ function decode6bit(c) {
 <script type="text/python">
     from browser import document, window, html
 
+    # Function to retrieve URL parameters
+    def get_url_param(param_name):
+        url_params = window.location.search
+        params = dict(p.split('=') for p in url_params[1:].split('&') if '=' in p)
+        return params.get(param_name, None)
+
+    # Retrieve the value of the 'uml' parameter
+    uml_value = get_url_param('uml')
+
+    # Display or use the retrieved value
+    if uml_value:
+        print(f"'uml' parameter found: {uml_value}")
+
+
     # Text for the PlantUML diagram example
     plantUMLDiagramText = """@startuml
     Alice -> Bob : hello
