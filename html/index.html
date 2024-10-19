@@ -266,18 +266,11 @@
     def encode6bit(b):
         if b < 10:
             return chr(48 + b)
-        b -= 10
-        if b < 26:
-            return chr(65 + b)
-        b -= 26
-        if b < 26:
-            return chr(97 + b)
-        b -= 26
-        if b == 0:
-            return '-'
-        if b == 1:
-            return '_'
-        return '?'
+        if b < 36:
+            return chr(65 + (b - 10))
+        if b < 62:
+            return chr(97 + (b - 36))
+        return '-' if b == 62 else '_'
 
     def append3bytes(b1, b2, b3):
         c1 = b1 >> 2
@@ -330,21 +323,12 @@
             return ord(c) - 65 + 10
         if 'a' <= c <= 'z':
             return ord(c) - 97 + 36
-        if c == '-':
-            return 62
-        if c == '_':
-            return 63
-        return 64  # Padding character, usually absent
+        return 62 if c == '-' else 63 if c == '_' else 64  # Padding character
 
     def compress_and_encode(data):
-        utf8_encoder = window.TextEncoder.new()
-        byte_array = utf8_encoder.encode(data)
+        byte_array = window.TextEncoder.new("utf-8").encode(data)
         compressed = window.pako.deflateRaw(byte_array)
-
-        # Base64 encoding must be done on binary bytes
-        compressed_list = [compressed[i] for i in range(compressed.length)]
-
-        # Base64 encoding from the byte array
+        compressed_list = list(compressed)  # Direct conversion to list
         return encode64(compressed_list)
 
 
@@ -354,10 +338,7 @@
         # Convert the decoded string into a byte array
         byteArray = window.Uint8Array.new([ord(c) for c in decoded_base64])
         inflated = window.pako.inflateRaw(byteArray)
-
-        # Proper use of TextDecoder with "new"
-        text_decoder = window.TextDecoder.new("utf-8")
-        return text_decoder.decode(inflated)
+        return window.TextDecoder.new("utf-8").decode(inflated)
 
 
     # Function to retrieve URL parameters
