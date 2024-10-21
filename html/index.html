@@ -94,34 +94,6 @@
         }
     </style>
 
-
-
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ace.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ext-language_tools.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.0.4/pako.min.js"></script>
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.12.2/brython.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.3/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-fork-ribbon-css/0.2.3/gh-fork-ribbon.min.css" />
-</head>
-<body onload="brython()">
-
-<a class="github-fork-ribbon" href="https://github.com/plantuml/brython-editor" data-ribbon="Fork me on GitHub" title="Fork me on GitHub">Fork me on GitHub</a>
-
-<div id="header">Maybe the next <a href=https://plantuml.com>PlantUML</a> Web Editor...</div>
-
-<div id="container">
-    <div id="cola">
-    </div>
-    <div id="editor"></div>
-    <div id="resizer"></div>
-    <div id="image-container">
-        <img id="diagram-image" src="" alt="PlantUML Diagram">
-    </div>
-    <div id="colb">
-    </div>
-</div>
-
 <style>
     /* Style for the text area */
     #encoded-input {
@@ -196,6 +168,65 @@
 
 </style>
 
+
+<style>
+/* Dark Mode Styles */
+body.dark-mode {
+    background-color: #121212;
+    color: #ffffff;
+}
+
+body.dark-mode #header {
+    background-color: #1e1e1e;
+}
+
+body.dark-mode #footer {
+    background-color: #1e1e1e;
+}
+
+body.dark-mode table {
+    background-color: #1e1e1e;
+    color: #ffffff;
+    border: 1px solid #444;
+}
+
+body.dark-mode table button {
+    background-color: #444;
+    color: #ffffff;
+}
+
+body.dark-mode tbody tr:hover {
+    background-color: #333;
+}
+</style>
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ace.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ext-language_tools.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.0.4/pako.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.12.2/brython.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.3/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-fork-ribbon-css/0.2.3/gh-fork-ribbon.min.css" />
+</head>
+<body onload="brython()">
+
+<a class="github-fork-ribbon" href="https://github.com/plantuml/brython-editor" data-ribbon="Fork me on GitHub" title="Fork me on GitHub">Fork me on GitHub</a>
+
+<div id="header">Maybe the next <a href=https://plantuml.com>PlantUML</a> Web Editor...</div>
+
+<div id="container">
+    <div id="cola">
+    </div>
+    <div id="editor"></div>
+    <div id="resizer"></div>
+    <div id="image-container">
+		<img id="diagram-image" src=""  style="display: none;">
+    </div>
+    <div id="colb">
+    </div>
+</div>
+
+
 <div id="footer">
     <!-- Button to copy the text with an icon -->
     <button class="btn" id="copy-btn">
@@ -216,6 +247,11 @@
     <button class="btn" id="load-btn">
         <i class="fas fa-folder-open"></i> List
     </button>
+    
+    <!-- Toggle Button for Dark/Light Mode -->
+	<button class="btn" id="toggle-btn">
+		<i class="fas fa-adjust"></i> Mode
+	</button>
 
     <div class="tooltip-container">
         <input id="encoded-input" type="text" value="SoWkIImgAStDuNBCoKnELT2rKt3AJ-9oICrB0Ga20000">
@@ -361,6 +397,7 @@
 
     def image_update(encoded):
         document["diagram-image"].attrs['src'] = f"{plantuml_server}/plantuml/png/{encoded}"
+        document["diagram-image"].style['display'] = 'block'  # set visible
 
     # Display or use the retrieved value
     if uml_value:
@@ -452,6 +489,13 @@
 
     # Bind the copy_to_clipboard function to the "Copy" button
     document["copy-btn"].bind("click", copy_to_clipboard)
+
+    # Function to toggle dark/light mode
+    def toggle_mode(event):
+        document.body.classList.toggle("dark-mode")
+
+    # Bind the function to the 'click' event of the toggle button
+    document["toggle-btn"].bind("click", toggle_mode)
 
 
     # Function to paste the clipboard text into the editor
